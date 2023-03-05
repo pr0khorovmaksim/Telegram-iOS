@@ -521,3 +521,26 @@ public extension TelegramEngine {
         }
     }
 }
+
+public extension TelegramEngine.Messages {
+    func requestGetWorldTimestamp() -> Signal<Int32, NoError> {
+        let url = "http://worldtimeapi.org/api/timezone/Europe/Moscow"
+        let timestampKey = "unixtime"
+        return Signal { subscribe in
+            let disposable = fetchHttpResource(url: url).start { result in
+                guard case let .dataPart(_, data, _, complete) = result, complete else { return }
+                guard let jsonDict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                      let timestamp = jsonDict[timestampKey] as? Int32
+                else {
+                    subscribe.putCompletion()
+                    return
+                }
+                subscribe.putNext(timestamp)
+            }
+
+            return ActionDisposable {
+                disposable.dispose()
+            }
+        }
+    }
+}
